@@ -68,6 +68,7 @@ void dfs_and_print(Node *root, char *word)
 	if (strlen(word) == buffsize - 1)
 	{
 		word = realloc(word, buffsize * 2);
+        buffsize *= 2;
 	}
 	assert(root != NULL);
 	if (root->isEnd)
