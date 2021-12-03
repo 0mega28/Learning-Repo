@@ -9,40 +9,34 @@
 #define MAX_ARG_LENGTH 100
 #define PROMT_SIZE 500
 
-void print_argv(char **argv);
-void type_prompt(char *prompt);
-void read_command(char **argv);
-void run_command(char **argv);
-void alloc_argv(char **argv);
-void free_argv(char **argv);
+void type_prompt();
+void read_command();
+void run_command();
+void cleanup();
+
+char prompt[PROMT_SIZE] = "shell$ ";
+static char *argv[NUMBER_OF_ARGS];
+static char *line;
 
 int main(void)
 {
-	char prompt[PROMT_SIZE] = "shell$ ";
-	char *argv[NUMBER_OF_ARGS];
-
 	while (true)
 	{
-		alloc_argv(argv);
-
-		type_prompt(prompt);
-		read_command(argv);
-		run_command(argv);
-
-		free_argv(argv);
+		type_prompt();
+		read_command();
+		run_command();
+		cleanup();
 	}
-
 	return 0;
 }
 
-void type_prompt(char *prompt)
+void type_prompt()
 {
 	printf("%s", prompt);
 }
 
-void read_command(char **argv)
+void read_command()
 {
-	char *line = NULL;
 	size_t len = 0;
 	ssize_t read;
 	read = getline(&line, &len, stdin);
@@ -56,16 +50,14 @@ void read_command(char **argv)
 	char *token = strtok(line, " ");
 	while (token != NULL)
 	{
-		strcpy(argv[i], token);
+		argv[i] = token;
 		token = strtok(NULL, " ");
 		i++;
 	}
-	free(argv[i]);
 	argv[i] = NULL;
-	free(line);
 }
 
-void run_command(char **argv)
+void run_command()
 {
 	pid_t child = fork();
 	if (child == 0)
@@ -86,28 +78,7 @@ void run_command(char **argv)
 	}
 }
 
-void print_argv(char **argv)
+void cleanup()
 {
-	int i = 0;
-	while (argv[i] != NULL)
-	{
-		printf("%s ", argv[i]);
-		i++;
-	}
-}
-
-void alloc_argv(char **argv)
-{
-	for (int i = 0; i < NUMBER_OF_ARGS; i++)
-	{
-		argv[i] = malloc(sizeof(char) * MAX_ARG_LENGTH);
-	}
-}
-
-void free_argv(char **argv)
-{
-	for (int i = 0; i < NUMBER_OF_ARGS; i++)
-	{
-		free(argv[i]);
-	}
+	free(line);
 }
