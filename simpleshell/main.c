@@ -5,6 +5,9 @@
 #include <sys/wait.h>
 #include <stdbool.h>
 
+#include "builtin_utils.h"
+#include "cd.h"
+
 #define NUMBER_OF_ARGS 40
 #define MAX_ARG_LENGTH 100
 #define BUFFER_SIZE 500
@@ -65,6 +68,11 @@ void read_command()
 
 void run_command()
 {
+	if (run_builtin_command(argv) <= 0)
+	{
+		return;
+	}
+
 	pid_t child = fork();
 	if (child == 0)
 	{
