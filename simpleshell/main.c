@@ -77,7 +77,8 @@ void run_command()
 	if (child == 0)
 	{
 		/* In child */
-		execvp(argv[0], argv);
+		if (execvp(argv[0], argv) == -1)
+			printf("%s: command not found\n", argv[0]);
 	}
 	else if (child > 0)
 	{
