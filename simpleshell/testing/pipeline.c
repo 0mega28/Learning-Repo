@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 void pipeline(char **cmd1, char **cmd2)
 {
@@ -44,7 +45,20 @@ int main(void)
 	char *cmd1[] = {"ls", "-l", NULL};
 	char *cmd2[] = {"wc", "-l", NULL};
 
-	pipeline(cmd1, cmd2);
+	pid_t child = fork();
+
+	switch (child)
+	{
+	case 0: /* In child */
+		pipeline(cmd1, cmd2);
+	case -1:
+		perror("fork");
+		break;
+	default: /* In parent */
+		waitpid(child, NULL, 0);
+	}
+
+	printf("Pipeline finished\n");
 
 	return 0;
 }
