@@ -5,16 +5,16 @@
 #include <sys/wait.h>
 #include <stdbool.h>
 
-#define NUMBER_OF_ARGS 20
+#define NUMBER_OF_ARGS 40
 #define MAX_ARG_LENGTH 100
-#define PROMT_SIZE 500
+#define BUFFER_SIZE 500
 
-void type_prompt();
+void show_prompt();
 void read_command();
 void run_command();
 void cleanup();
 
-char prompt[PROMT_SIZE] = "shell$ ";
+char prompt[BUFFER_SIZE];
 static char *argv[NUMBER_OF_ARGS];
 static char *line;
 
@@ -22,7 +22,7 @@ int main(void)
 {
 	while (true)
 	{
-		type_prompt();
+		show_prompt();
 		read_command();
 		run_command();
 		cleanup();
@@ -30,8 +30,14 @@ int main(void)
 	return 0;
 }
 
-void type_prompt()
+void show_prompt()
 {
+	char cwd[BUFFER_SIZE];
+	getcwd(cwd, sizeof(cwd));
+
+	strcpy(prompt, cwd);
+	strcat(prompt, " $ ");
+
 	printf("%s", prompt);
 }
 
