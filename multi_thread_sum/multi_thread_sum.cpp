@@ -27,11 +27,16 @@ void sum_function(lli start, lli end, int id) {
 	std::cout << "Thread Finished " << id << std::endl;
 }
 
-int main() {
+int main(int argc, char **argv) {
     lli start = 1, end = 10000000000;
 
+    if (argc != 2) {
+	    std::cout << "Usage: ./prog <number-of-thread>" << std::endl;
+	    exit(1);
+    }
+    
 	/* Number of thread used for execution */
-    int number_of_threads = 6;
+    int number_of_threads = std::stoi(argv[1]);
 
 	std::cout << "Number of threads " << number_of_threads << "\n" << std::endl;
 
