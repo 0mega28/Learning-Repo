@@ -65,6 +65,7 @@ public class GoogleLogger {
             }
         }
         allOf(tasks.toArray(CompletableFuture[]::new)).get();
+        executorService.shutdown();
     }
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
