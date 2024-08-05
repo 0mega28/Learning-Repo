@@ -102,42 +102,32 @@ interface LogClient {
 }
 
 
-class LogClientImpl implements LogClient, Closeable {
+class LogClientImpl implements LogClient {
     PriorityBlockingQueue<Process> queue;
     ConcurrentHashMap<String, Process> processes;
-    ExecutorService[] executors;
 
     LogClientImpl(int threads) {
         queue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Process::getStartTime));
         processes = new ConcurrentHashMap<>();
-        executors = new ExecutorService[threads];
-
-        for (int i = 0; i < executors.length; i++) {
-            executors[i] = Executors.newSingleThreadExecutor();
-        }
-    }
-
-    int getExecutorIdx(final String processId) {
-        return processId.hashCode() % executors.length;
     }
 
     @Override
     public void start(final String processId, final long timestamp) {
-        executors[getExecutorIdx(processId)].execute(() -> {
-            Process newProcess = new Process(processId, timestamp);
-            processes.put(processId, newProcess);
-            queue.add(newProcess);
-        });
+        Process newProcess = new Process(processId, timestamp);
+        processes.put(processId, newProcess);
+        queue.add(newProcess);
     }
 
     @Override
     public void end(final String processId) {
-        executors[getExecutorIdx(processId)].execute(() -> {
-            long now = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        while (true) { 
             Process process = processes.get(processId);
+            if (process == null) continue;
             process.setEndTime(now);
             processes.remove(processId);
-        });
+            break;
+        }
     }
 
     @Override
@@ -150,13 +140,6 @@ class LogClientImpl implements LogClient, Closeable {
             return process.toString();
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public void close() throws IOException {
-        for (ExecutorService executor : executors) {
-            executor.shutdown();
         }
     }
 }
