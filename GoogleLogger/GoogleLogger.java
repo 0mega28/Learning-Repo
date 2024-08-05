@@ -6,32 +6,6 @@ import java.util.concurrent.*;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
 
-interface LogClient {
-    /**
-     * When a process starts, it calls 'start' with processId.
-     */
-    void start(String processId, long timestamp);
-
-    /**
-     * When the same process ends, it calls 'end' with processId.
-     */
-    void end(String processId);
-
-    /**
-     * Polls the first log entry of a completed process sorted by the start time of processes in the below format
-     * {processId} started at {startTime} and ended at {endTime}
-     * <p>
-     * process id = 1 --> 12, 15
-     * process id = 2 --> 8, 12
-     * process id = 3 --> 7, 19
-     * <p>
-     * {3} started at {7} and ended at {19}
-     * {2} started at {8} and ended at {12}
-     * {1} started at {12} and ended at {15}
-     */
-    String poll();
-}
-
 public class GoogleLogger {
     public void defaultLogging() throws InterruptedException, ExecutionException {
         final LogClient logClient = new LogClientImpl(10);
@@ -94,11 +68,38 @@ public class GoogleLogger {
     }
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
-        Test test = new Test();
+        GoogleLogger test = new GoogleLogger();
         test.defaultLogging();
         test.concurrencyTest();
     }
 }
+
+interface LogClient {
+    /**
+     * When a process starts, it calls 'start' with processId.
+     */
+    void start(String processId, long timestamp);
+
+    /**
+     * When the same process ends, it calls 'end' with processId.
+     */
+    void end(String processId);
+
+    /**
+     * Polls the first log entry of a completed process sorted by the start time of processes in the below format
+     * {processId} started at {startTime} and ended at {endTime}
+     * <p>
+     * process id = 1 --> 12, 15
+     * process id = 2 --> 8, 12
+     * process id = 3 --> 7, 19
+     * <p>
+     * {3} started at {7} and ended at {19}
+     * {2} started at {8} and ended at {12}
+     * {1} started at {12} and ended at {15}
+     */
+    String poll();
+}
+
 
 class LogClientImpl implements LogClient, Closeable {
     PriorityBlockingQueue<Process> queue;
