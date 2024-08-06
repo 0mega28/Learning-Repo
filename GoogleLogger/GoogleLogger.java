@@ -121,13 +121,15 @@ class LogClientImpl implements LogClient {
     @Override
     public void end(final String processId) {
         long now = System.currentTimeMillis();
-        while (true) { 
-            Process process = processes.get(processId);
-            if (process == null) continue;
-            process.setEndTime(now);
-            processes.remove(processId);
-            break;
-        }
+        new Thread(() -> {
+            while (true) { 
+                Process process = processes.get(processId);
+                if (process == null) continue;
+                process.setEndTime(now);
+                processes.remove(processId);
+                break;
+            }
+        }).start();
     }
 
     @Override
