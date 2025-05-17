@@ -378,6 +378,7 @@ sealed abstract class Expense {
 }
 
 class SplitwiseSystem {
+    private static final double ROUDING_ERROR = 1e-6;
     private final Set<User> users;
     private final Set<Group> groups;
 
@@ -424,7 +425,7 @@ class SplitwiseSystem {
     public void settleExpense(Group group, User user1, User user2) {
         double user1ToUser2 = group.requiredAmountForSettlement(user1, user2);
         double user2ToUser1 = group.requiredAmountForSettlement(user2, user1);
-        if (Math.abs(user1ToUser2 - user2ToUser1) == 0) return;
+        if (Math.abs(user1ToUser2 - user2ToUser1) < ROUDING_ERROR) return;
 
         User payer = user1ToUser2 > user2ToUser1 ? user1 : user2;
         User reciver = user1ToUser2 > user2ToUser1 ? user2 : user1;
