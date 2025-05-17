@@ -35,7 +35,7 @@ class User {
         if (other == null
             || !(other instanceof User otherUser))
             return false;
-        
+
         return id.equals(otherUser.id);
     }
 
@@ -57,6 +57,55 @@ class User {
     }
 }
 
+class DebtGraph {
+    private final Map<User, Map<User, Double>> graph;
+
+    public DebtGraph() {
+        this.graph = new HashMap<>();
+    }
+
+    public synchronized void addDept(User from, User to, double amount) {
+        assert amount > 0 : "Amount should be positive, but found to be: " + amount;
+
+        double forward = getDebt(from, to);
+        double backward = getDebt(to, from);
+
+        if (backward == amount) {
+            graph.get(to).remove(from);
+        } else if (backward > amount) {
+            graph.computeIfAbsent(to, x -> new HashMap<>())
+                .put(from, backward - amount);
+        } else {
+            double netAmount = amount - backward;
+
+            if (backward != 0)
+                graph.get(to).remove(from);
+            graph.computeIfAbsent(from, x -> new HashMap<>())
+                .merge(to, netAmount, Double::sum);
+        }
+    }
+
+    public synchronized double getDebt(User from, User to) {
+        return graph.getOrDefault(from, Collections.emptyMap())
+            .getOrDefault(to, 0D);
+    }
+
+    public synchronized String toStringSummary() {
+        StringBuilder sb = new StringBuilder();
+        for (var entry : graph.entrySet()) {
+            for (var inner : entry.getValue().entrySet()) {
+                sb.append(entry.getKey().name())
+                  .append(" owes ")
+                  .append(inner.getKey().name())
+                  .append(": ")
+                  .append(inner.getValue())
+                  .append("\n");
+            }
+        }
+        return sb.toString();
+    }
+}
+
 class Group {
     private final UUID id;
     private String name;
@@ -65,9 +114,9 @@ class Group {
     private final Set<User> members;
 
     private final List<Expense> expenses;
-    private final Map<User, Map<User, Double>> totals;
+    private final DebtGraph debtGraph;
     private int logPlayedTill = 0;
-    
+
 
     public Group(String name, User admin, Set<User> members) {
         this.id = UUID.randomUUID();
@@ -79,11 +128,11 @@ class Group {
         this.members.addAll(members);
         this.expenses = new CopyOnWriteArrayList<>();
 
-        this.totals = new ConcurrentHashMap<>();
+        this.debtGraph = new DebtGraph();
     }
 
     /**
-     * 
+     *
      * @param user user to add
      * @return true if user was not there in group already
      */
@@ -100,7 +149,7 @@ class Group {
         if (other == null
             || !(other instanceof Group otherGroup))
             return false;
-        
+
         return id.equals(otherGroup.id);
     }
 
@@ -129,10 +178,7 @@ class Group {
                     User receiver = receiverAndAmount.getKey();
                     double owedAmount = receiverAndAmount.getValue();
 
-                    var paymentMap = totals.computeIfAbsent(payer, x -> new HashMap<>());
-
-                    paymentMap.putIfAbsent(receiver, 0D);
-                    paymentMap.put(receiver, paymentMap.get(receiver) + owedAmount);
+                    debtGraph.addDept(payer, receiver, owedAmount);
                 }
             }
 
@@ -142,36 +188,12 @@ class Group {
 
     double requiredAmountForSettlement(User payer, User receiver) {
         playLogs();
-
-        var payersTotals =  totals.get(payer); 
-        if (payersTotals == null || !payersTotals.containsKey(receiver)) return 0;
-        return payersTotals.get(receiver);
+        return debtGraph.getDebt(payer, receiver);
     }
 
-    // TODO compute and save
     public String groupSummary() {
         playLogs();
-        Map<User, Map<User, Double>> result = totals;
-
-        StringBuilder sb = new StringBuilder();
-
-        for (var entry: result.entrySet()) {
-            User payer = entry.getKey();
-            sb.append(payer.name() + " owes to: \n");
-            for (var receiverAndAmount: entry.getValue().entrySet()) {
-                User receiver = receiverAndAmount.getKey();
-                double amount = receiverAndAmount.getValue();
-
-                sb.append("\t")
-                    .append("to: ")
-                    .append(receiver.name())
-                    .append(" amount: ")
-                    .append(amount)
-                    .append("\n");
-            }
-        }
-
-        return sb.toString();
+        return debtGraph.toStringSummary();
     }
 
     public void printTransactions() {
@@ -253,7 +275,7 @@ sealed abstract class Expense {
 
             if (totalPercent != 100)
                 throw new IllegalArgumentException("Sum of percent should be 100, but it was found: " + totalPercent);
-            
+
             this.userAndPercentMap = Map.copyOf(userAndPercentMap);
         }
 
@@ -304,7 +326,7 @@ sealed abstract class Expense {
                 .stream()
                 .mapToDouble(Double::doubleValue)
                 .sum();
-            
+
             if (totalAmount != amount)
                 throw new IllegalArgumentException("Sum of all amount should equal: " + amount + " but, it was found to be: " + totalAmount);
 
@@ -312,7 +334,7 @@ sealed abstract class Expense {
         }
 
         public Map<User, Double> userAndAmount() { return Collections.unmodifiableMap(userAndAmount); }
-        
+
         @Override
         public Map<User, Map<User, Double>> userOwesTo() {
             Map<User, Map<User, Double>> result = new HashMap<>();
@@ -447,7 +469,7 @@ class UserNotFound extends RuntimeException {
     public UserNotFound(String message) { super(message); }
 }
 
-interface Splitwise {
+public interface Splitwise {
     static void main(String... args) {
         SplitwiseSystem splitwiseSystem = new SplitwiseSystem();
         User alice = splitwiseSystem.addUser("Alice");
@@ -457,11 +479,10 @@ interface Splitwise {
         Group himalaya = splitwiseSystem.createGroup(alice, "Himalayas", List.of(alice, bob));
 
         splitwiseSystem.splitEqual(charlie, himalaya, 10, "First Payment", List.of(alice, bob, charlie));
-        // splitwiseSystem.splitEqual(alice, himalaya, 10, "First Payment", List.of(alice, bob, charlie));
+        splitwiseSystem.splitEqual(alice, himalaya, 10, "First Payment", List.of(alice, bob, charlie));
         splitwiseSystem.settleExpense(himalaya, alice, charlie);
         splitwiseSystem.printTransactions(himalaya);
 
-        System.out.println(splitwiseSystem.groupSummary(himalaya));
         System.out.println(splitwiseSystem.groupSummary(himalaya));
     }
 }
