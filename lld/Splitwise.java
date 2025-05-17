@@ -198,10 +198,10 @@ sealed abstract class Expense {
 
     public abstract Map<User, Map<User, Double>> userOwesTo();
 
-    public static final class SpiltEqual extends Expense {
+    public static final class SplitEqual extends Expense {
         private final List<User> splitAmong;
 
-        public SpiltEqual(double amount, String description, User paidByUser, List<User> splitAmong) {
+        public SplitEqual(double amount, String description, User paidByUser, List<User> splitAmong) {
             super(paidByUser, amount, description);
             this.splitAmong = List.copyOf(splitAmong);
         }
@@ -408,7 +408,7 @@ class SplitwiseSystem {
     }
 
     public void splitEqual(User paidByUser, Group group, double amount, String description, List<User> splitAmong) {
-        Expense expense = new Expense.SpiltEqual(amount, description, paidByUser, splitAmong);
+        Expense expense = new Expense.SplitEqual(amount, description, paidByUser, splitAmong);
         group.addExpense(expense);
     }
 
