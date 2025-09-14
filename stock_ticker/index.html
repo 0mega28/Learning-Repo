@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Stock Ticker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+
+    <script type="module" defer>
+        import { h, render } from 'https://esm.sh/preact';
+        import { useState, useEffect, useRef } from 'https://esm.sh/preact/hooks';
+
+        function Ticker() {
+            const [count, setCount] = useState(1000);
+            const prevCount = useRef(count);
+            const [color, setColor] = useState("");
+
+            useEffect(() => {
+                if (count == prevCount.current) return;
+
+                const newColor = count > prevCount.current ? "green" : "red";
+                setColor(newColor);
+                prevCount.current = count;
+
+                const timeoutId = setTimeout(() => setColor(""), 300);
+                return () => clearTimeout(timeoutId);
+            }, [count]);
+
+            useEffect(() => {
+                const timeoutId = setInterval(() => {
+                    const random = Math.ceil(Math.random() * 10) - 5;
+                    setCount(count => count + random);
+                }, 2000);
+                return () => clearInterval(timeoutId);
+            }, []);
+
+            return h(
+                "div",
+                {
+                    style: {
+                        fontSize: "5rem",
+                        color: color,
+                        transition: "color 0.1s"
+                    },
+                },
+                count
+            );
+        }
+
+        const app = h(Ticker, null, null);
+
+        render(app, root);
+    </script>
+</head>
+
+<body>
+    <div id="root" style="width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center;">
+    </div>
+</body>
+
+</html>
